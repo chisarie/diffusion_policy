@@ -76,7 +76,8 @@ class ConditionalUnet1D(nn.Module):
         down_dims=[256,512,1024],
         kernel_size=3,
         n_groups=8,
-        cond_predict_scale=False
+        cond_predict_scale=False,
+        use_dropout=False
         ):
         super().__init__()
         if output_dim is None:
@@ -158,6 +159,8 @@ class ConditionalUnet1D(nn.Module):
                     cond_predict_scale=cond_predict_scale),
                 Upsample1d(dim_in) if not is_last else nn.Identity()
             ]))
+
+        self.dropout = nn.Dropout(0.25) if use_dropout else nn.Identity()
         
         final_conv = nn.Sequential(
             Conv1dBlock(start_dim, start_dim, kernel_size=kernel_size),
@@ -245,6 +248,7 @@ class ConditionalUnet1D(nn.Module):
             x = resnet2(x, global_feature)
             x = upsample(x)
 
+        x = self.dropout(x)
         x = self.final_conv(x)
 
         x = einops.rearrange(x, 'b t h -> b h t')
